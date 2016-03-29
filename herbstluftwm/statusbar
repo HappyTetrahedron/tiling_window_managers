@@ -1,0 +1,34 @@
+## No output to X <yes/no>
+out_to_x no
+ 
+## Create own window to draw <yes/no>
+own_window no
+ 
+## Print everything to console?
+out_to_console yes
+ 
+## Use double buffering (reduces flicker, not needed for console output)
+double_buffer no
+ 
+## Set to yes if you want Conky to be forked in the background
+background no
+ 
+## Update interval in seconds
+update_interval 1.0
+ 
+## This is the number of times Conky will update before quitting.
+## Set to zero to run forever.
+total_run_times 0
+ 
+## How strict should if_up be when testing an interface for being up?
+## The value is one of up, link or address, to check for the interface
+## being solely up, being up and having link or being up, having link
+## and an assigned IP address.
+if_up_strictness address
+ 
+ 
+## Force UTF8? note that UTF8 support required XFT
+override_utf8_locale no
+ 
+TEXT
+CPU ${cpu}%  RAM ${memperc}% | TEMP CPU ${hwmon temp 1} | /SYSTEM ${fs_used /}/${fs_free /} /HOME ${fs_used /home/}/${fs_free /home/} | ethernet DOWN ${downspeed enp4s0} UP ${upspeed enp4s0} | ${time %A, %e %B, %k:%M}

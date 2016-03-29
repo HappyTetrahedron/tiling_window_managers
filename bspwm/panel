@@ -1,0 +1,229 @@
+#! /bin/sh
+#
+# Panel for bspwm, written by Jack
+# http://blog.codezen.org/2015/03/13/on-bspwm-tweaking/
+
+# slightly modified by Aline Abler
+
+# Absorb all of the rote variable setting to make our panel self-contained
+# From example .profile changes
+
+PANEL_FIFO="$HOME/.config/bspwm/panfifo"
+PANEL_HEIGHT="16"
+PANEL_FONT_FAMILY="-*-leggie-*-*-*-*-12-*-*-*-*-*-*-*"
+
+# From panel_colors file
+
+COLOR_FOREGROUND='#FFA3A6AB'
+COLOR_BACKGROUND='#FF181715'
+COLOR_ACTIVE_MONITOR_FG=$COLOR_BACKGROUND
+COLOR_ACTIVE_MONITOR_BG='#FF58C5F1'
+COLOR_INACTIVE_MONITOR_FG='#FF58C5F1'
+COLOR_INACTIVE_MONITOR_BG=$COLOR_BACKGROUND
+COLOR_FOCUSED_OCCUPIED_FG='#FFF6F9FF'
+COLOR_FOCUSED_OCCUPIED_BG='#FF34322E'
+COLOR_FOCUSED_FREE_FG='#FFF6F9FF'
+COLOR_FOCUSED_FREE_BG=$COLOR_FOCUSED_OCCUPIED_BG
+COLOR_FOCUSED_URGENT_FG=$COLOR_BACKGROUND
+COLOR_FOCUSED_URGENT_BG='#FFF9A299'
+COLOR_OCCUPIED_FG='#FFA3A6AB'
+COLOR_OCCUPIED_BG=$COLOR_BACKGROUND
+COLOR_FREE_FG='#FF6F7277'
+COLOR_FREE_BG=$COLOR_BACKGROUND
+COLOR_URGENT_FG='#FFF9A299'
+COLOR_URGENT_BG=$COLOR_BACKGROUND
+COLOR_LAYOUT_FG='#FFA3A6AB'
+COLOR_LAYOUT_BG=$COLOR_BACKGROUND
+COLOR_TITLE_FG='#FFA3A6AB'
+COLOR_TITLE_BG=$COLOR_BACKGROUND
+COLOR_STATUS_FG='#FFA3A6AB'
+COLOR_STATUS_BG=$COLOR_BACKGROUND
+
+# Kill any panel processes older than us, instead of bailing like the example
+# does. That caused one too many panel-less boots for me.
+
+while [ $(pgrep -cx panel) -gt 1 ] ; do
+	pkill -ox -9 panel
+done
+
+# Kill any remaining trays / xtitle instances so we don't have multiples.
+
+killall -9 stalonetray
+killall -9 xtitle
+
+# Setup taken from example, tell bspwm to avoid our status/tray and to start
+# sending status updates to a FIFO
+
+trap 'trap - TERM; kill 0' INT TERM QUIT EXIT
+
+[ -e "$PANEL_FIFO" ] && rm "$PANEL_FIFO"
+mkfifo "$PANEL_FIFO"
+
+bspc config top_padding $PANEL_HEIGHT
+bspc control --subscribe > "$PANEL_FIFO" &
+
+# Here are the subprograms that add information to the status FIFO which are
+# interpreted by panel_bar, below. Each output is detected by its first
+# character, which is how the bspwm internal information is presented.
+
+# T - xtitle output
+# S - date output (same as example)
+
+# Title
+
+xtitle -sf 'T%s' > "$PANEL_FIFO" &
+
+# Simple date
+
+function clock {
+    while true; do
+        date +"S%A, %e %B, %k:%M"
+        sleep 10
+    done
+}
+
+clock > "$PANEL_FIFO" &
+
+# Now panel_bar, which was mostly taken from the example panel_bar, with a
+# handful of improvements.
+
+# - functionified, from panel_bar file of example
+# - the output changes based on the number of monitors, to place a single
+# monitors's information on that same monitor, instead of all in one corner.
+# - all the desktop indicators are enumerated
+
+
+wm_info_array=("" "" "" "" "")
+
+# num_mon=$(bspc query -M | wc -l)
+num_mon=$(xrandr | grep connected | grep mm | wc -l)
+
+function panel_bar {
+    while read line < $PANEL_FIFO; do
+
+        case $line in
+            S*)
+                # clock output
+                date="${line#?}"
+                ;;
+            B*)
+                # battery output
+                percent="${line#?}"
+                ;;
+            T*)
+                # xtitle output
+                title="%{F$COLOR_TITLE_FG}%{B$COLOR_TITLE_BG} ${line#?} %{B-}%{F-}"
+                ;;
+            W*)
+                # bspwm internal state
+                wm_infos=""
+                cur_mon=-1
+                desktop_num=1
+
+                IFS=':'
+                set -- ${line#?}
+                while [ $# -gt 0 ] ; do
+                    item=$1
+                    name=${item#?}
+                    case $item in
+                        M*)
+                            # active monitor
+                            cur_mon=$((cur_mon + 1))
+                            wm_infos=""
+                            if [ $num_mon -gt 1 ] ; then
+                                wm_infos="$wm_infos %{F$COLOR_ACTIVE_MONITOR_FG}%{B$COLOR_ACTIVE_MONITOR_BG} ${name} %{B-}%{F-}  "
+                            fi
+                            ;;
+                        m*)
+                            # inactive monitor
+                            cur_mon=$((cur_mon + 1))
+                            wm_infos=""
+                            if [ $num_mon -gt 1 ] ; then
+                                wm_infos="$wm_infos %{F$COLOR_INACTIVE_MONITOR_FG}%{B$COLOR_INACTIVE_MONITOR_BG} ${name} %{B-}%{F-}  "
+                            fi
+                            ;;
+                        O*)
+                            # focused occupied desktop
+                            wm_infos="$wm_infos%{F$COLOR_FOCUSED_OCCUPIED_FG}%{B$COLOR_FOCUSED_OCCUPIED_BG}%{U$COLOR_FOREGROUND}%{+u} ${desktop_num}. ${name} %{-u}%{B-}%{F-}"
+                            desktop_num=$((desktop_num + 1))
+                            ;;
+                        F*)
+                            # focused free desktop
+                            wm_infos="$wm_infos%{F$COLOR_FOCUSED_FREE_FG}%{B$COLOR_FOCUSED_FREE_BG}%{U$COLOR_FOREGROUND}%{+u} ${desktop_num}. ${name} %{-u}%{B-}%{F-}"
+                            desktop_num=$((desktop_num + 1))
+                            ;;
+                        U*)
+                            # focused urgent desktop
+                            wm_infos="$wm_infos%{F$COLOR_FOCUSED_URGENT_FG}%{B$COLOR_FOCUSED_URGENT_BG}%{U$COLOR_FOREGROUND}%{+u} ${desktop_num}. ${name} %{-u}%{B-}%{F-}"
+                            desktop_num=$((desktop_num + 1))
+                            ;;
+                        o*)
+                            # occupied desktop
+                            wm_infos="$wm_infos%{F$COLOR_OCCUPIED_FG}%{B$COLOR_OCCUPIED_BG} ${desktop_num}. ${name} %{B-}%{F-}"
+                            desktop_num=$((desktop_num + 1))
+                            ;;
+                        f*)
+                            # free desktop
+                            wm_infos="$wm_infos%{F$COLOR_FREE_FG}%{B$COLOR_FREE_BG} ${desktop_num}. ${name} %{B-}%{F-}"
+                            desktop_num=$((desktop_num + 1))
+                            ;;
+                        u*)
+                            # urgent desktop
+                            wm_infos="$wm_infos%{F$COLOR_URGENT_FG}%{B$COLOR_URGENT_BG} ${desktop_num}. ${name} %{B-}%{F-}"
+                            desktop_num=$((desktop_num + 1))
+                            ;;
+                        L*)
+                            # layout
+                            wm_infos="$wm_infos %{F$COLOR_LAYOUT_FG}%{B$COLOR_LAYOUT_BG} $( if [[ "${name}" = "T" ]] ;  then echo '#' ; else echo '[ ]' ; fi ) %{B-}%{F-}"
+                            ;;
+                    esac
+                    shift
+                    wm_info_array[cur_mon]="$wm_infos"
+                done
+                ;;
+        esac
+
+        if [ $num_mon -eq 1 ]; then
+            fmt="%{l}${wm_info_array[0]}%{c}${title}%{r}${date} "
+        elif [ $num_mon -eq 2 ]; then
+            fmt="%{l}${wm_info_array[0]}%{c}${title}%{r}${date} %{S+}%{l}${wm_info_array[2]}%{c}${title}%{r}${date} "
+        elif [ $num_mon -eq 3 ]; then
+            fmt="%{l}${wm_info_array[1]}%{c}${title}%{r}${date} %{S+}%{l}${wm_info_array[0]}%{c}${title}%{r}${date} %{S+}%{l}${wm_info_array[2]}%{c}${title}%{r}${date} "
+        else
+            # Same as 2 -- needs someone to test
+            fmt="%{l}${wm_info_array[0]}%{c}${title}%{r}${date} %{S+}%{l}${wm_info_array[1]}%{c}${title}%{r}${date} "
+        fi
+
+        printf "%s\n" "$fmt"
+    done
+}
+
+# Actually invoking the panel and piping to bar
+
+panel_bar | lemonbar -p -g x$PANEL_HEIGHT -f "$PANEL_FONT_FAMILY" -F "$COLOR_FOREGROUND" -B "$COLOR_BACKGROUND" &
+
+# Hostname tweaks, including forcing stalonetray into a reasonable place, and
+# starting the battery monitor on my laptop
+
+HOSTNAME=`hostname`
+
+# Echelon dual monitor, tray should be upper right corner of left monitor
+
+if [ $HOSTNAME == "echelon" ]; then
+    TRAY_GEOM="1x1-1920"
+
+# Toadite single monitor, avoid date and battery
+
+elif [ $HOSTNAME == "toadite" ]; then
+    bat_percent > "$PANEL_FIFO" &
+    TRAY_GEOM="1x1-100"
+
+# Good for single monitor, just about enough room to avoid the date output
+
+else
+    TRAY_GEOM="1x1-200"
+fi
+
+stalonetray --geometry $TRAY_GEOM -i $PANEL_HEIGHT -bg "#${COLOR_BACKGROUND:3}" --grow-gravity NE --kludges force_icons_size &
+
+wait

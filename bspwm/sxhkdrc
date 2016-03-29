@@ -1,0 +1,115 @@
+# custom hotkeys
+
+super + shift + p
+    lock
+
+super + x
+    scrot '%Y-%m-%d-%H%M%S.png' -b -u -e 'mv $f ~/Files/screenshots/'
+
+super + shift + x
+    scrot '%Y-%m-%d-%H%M%S-full.png' -b -e 'mv $f ~/Files/screenshots/'
+
+super + shift + w
+    feh --bg-fill /home/alinea/Files/wallpaper/pinktree.jpg
+
+super + {w,e}
+    bspc monitor -f {prev,next}
+
+
+#
+# bspwm hotkeys
+#
+
+super + alt + Escape
+	bspc quit
+
+super + shift + q
+	bspc node -c
+
+super + t
+	bspc desktop -l next
+
+super + b
+	bspc desktop -B
+
+super + e
+    bspc desktop -E
+
+super + {s,f}
+	bspc node -t {floating,fullscreen}
+
+super + {grave,Tab}
+	bspc {node,desktop} -f last
+
+super + apostrophe
+	bspc node -s last
+
+super + {o,i}
+	bspc control --record-history off; \
+	bspc node {older,newer} -f; \
+	bspc control --record-history on
+
+super + y
+	bspc node -w last.manual
+
+super + m
+	bspc node -s biggest
+
+super + {_,shift + }{h,j,k,l}
+	bspc node -{f,s} {west,south,north,east}
+
+super + {_,shift + }c
+	bspc node -f {next,prev}
+
+super + {comma,period}
+	bspc desktop -C {backward,forward}
+
+super + bracket{west,east}
+	bspc desktop -f {prev,next}
+
+super + ctrl + {h,j,k,l}
+	bspc node -p {west,south,north,east}
+
+super + ctrl + {_,shift + }space
+	bspc {node -p cancel,desktop -c}
+
+super + alt + {h,j,k,l}
+	bspc node -e {west -10,south +10,north -10,east +10}
+
+super + alt + shift + {h,j,k,l}
+	bspc node -e {east -10,north +10,south -10,west +10}
+
+super + ctrl + shift + {h,j,k,l}
+    bspc node -R {west,south,north,east} 90
+
+super + ctrl + {1-9}
+	bspc node -r 0.{1-9}
+
+super + {_,shift + }{1-9,0}
+	bspc {desktop -f,node -d} ^{1-9,10}
+
+~button1
+	bspc pointer -g focus
+
+super + button{1-3}
+	bspc pointer -g {move,resize_side,resize_corner}
+
+#super + !button{1-3}
+#	bspc pointer -t %i %i
+
+super + @button{1-3}
+	bspc pointer -u
+
+#
+# wm independent hotkeys
+#
+
+super + Return
+	urxvt
+
+super + space
+	dmenu_run
+
+# make sxhkd reload its configuration files:
+super + Escape
+	pkill -USR1 -x sxhkd
