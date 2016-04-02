@@ -35,8 +35,8 @@ super + b
 super + e
     bspc desktop -E
 
-super + {s,f}
-	bspc node -t {floating,fullscreen}
+super + {s,f, t}
+	bspc node -t {~floating,~fullscreen}
 
 super + {grave,Tab}
 	bspc {node,desktop} -f last
@@ -64,7 +64,7 @@ super + {_,shift + }c
 super + {comma,period}
 	bspc desktop -C {backward,forward}
 
-super + bracket{west,east}
+super + bracket{left,right}
 	bspc desktop -f {prev,next}
 
 super + ctrl + {h,j,k,l}
@@ -79,11 +79,11 @@ super + alt + {h,j,k,l}
 super + alt + shift + {h,j,k,l}
 	bspc node -e {east -10,north +10,south -10,west +10}
 
-super + ctrl + shift + {h,j,k,l}
-    bspc node -R {west,south,north,east} 90
+super + ctrl + r
+    bspc node @parent -R 90
 
 super + ctrl + {1-9}
-	bspc node -r 0.{1-9}
+	bspc node @parent -r 0.{1-9}
 
 super + {_,shift + }{1-9,0}
 	bspc {desktop -f,node -d} ^{1-9,10}
@@ -108,7 +108,7 @@ super + Return
 	urxvt
 
 super + space
-	dmenu_run
+	dmenu_run -fn terminus-16
 
 # make sxhkd reload its configuration files:
 super + Escape
